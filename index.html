@@ -1,0 +1,1124 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrepAI Interview Studio — AI-Powered Mock Interview & Feedback System</title>
+  <!-- Tailwind CSS for responsive layout & clean utility styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Base typography & institutional theme tokens matching the project report */
+    :root {
+      --primary-blue: #1e3a8a;
+      --primary-blue-hover: #172e6e;
+      --bg-canvas: #f4f6fb;
+      --card-border: #dbe2ef;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Smooth panel transitions */
+    .fade-in {
+      animation: fadeSlideUp 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Custom subtle scrollbar for textarea */
+    textarea::-webkit-scrollbar {
+      width: 8px;
+    }
+    textarea::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    textarea::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 6px;
+    }
+    textarea::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Spinner animation for AI generation & evaluation states */
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 3px solid #ffffff;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    .spinner-blue {
+      border: 3px solid rgba(30, 58, 138, 0.2);
+      border-radius: 50%;
+      border-top: 3px solid #1e3a8a;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-[#1e3a8a] text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <!-- Briefcase / AI Studio SVG Icon -->
+        <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight leading-tight">PrepAI Interview Studio</h1>
+          <p class="text-xs sm:text-sm text-blue-100">AI-Powered Mock Interview &amp; Feedback System</p>
+        </div>
+      </div>
+
+      <!-- Status Badge indicating AI Mode Enabled -->
+      <div class="self-start sm:self-center">
+        <span id="ai-mode-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-100 border border-emerald-400/30">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          AI Mode Enabled
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+    <!-- Inline Notification Banner (Replaces alert() per UI rules) -->
+    <div id="toast-banner" class="hidden mb-5 rounded-xl px-4 py-3 text-sm font-medium border flex items-center justify-between gap-3 fade-in" role="alert">
+      <div class="flex items-center gap-2.5">
+        <svg id="toast-icon" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span id="toast-text">Notification message</span>
+      </div>
+      <button type="button" onclick="hideToast()" class="text-current opacity-70 hover:opacity-100 p-1 rounded-lg">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 1: CONFIGURE YOUR MOCK INTERVIEW (#setup-panel)                 -->
+    <!-- ===================================================================== -->
+    <section id="setup-panel" class="bg-white border border-[#dbe2ef] rounded-2xl shadow-sm p-6 sm:p-8 fade-in">
+      <div class="border-b border-slate-100 pb-4 mb-6">
+        <span class="inline-block text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-50 px-2.5 py-1 rounded-md mb-2">
+          Stage 1 of 3 • Session Configuration
+        </span>
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Configure Your Mock Interview</h2>
+        <p class="text-sm text-slate-500 mt-1">Select your target role, interview round, and difficulty to generate realistic questions.</p>
+      </div>
+
+      <form id="setup-form" novalidate>
+        <!-- Target Job Role Input -->
+        <div class="mb-5">
+          <label for="role-input" class="block text-sm font-semibold text-slate-800 mb-2">
+            Target Job Role <span class="text-rose-600">*</span>
+          </label>
+          <input
+            id="role-input"
+            type="text"
+            maxlength="120"
+            placeholder="e.g., Python Backend Developer, Data Analyst, Machine Learning Engineer"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition"
+            required
+          >
+          <!-- Quick-Select Role Chips -->
+          <div class="mt-3">
+            <span class="text-xs font-medium text-slate-500 block mb-2">Popular Roles (Click to autofill):</span>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="role-chip px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-[#1e3a8a] border border-slate-200 transition">
+                Python Backend Developer
+              </button>
+              <button type="button" class="role-chip px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-[#1e3a8a] border border-slate-200 transition">
+                Data Analyst
+              </button>
+              <button type="button" class="role-chip px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-[#1e3a8a] border border-slate-200 transition">
+                Machine Learning Engineer
+              </button>
+              <button type="button" class="role-chip px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-[#1e3a8a] border border-slate-200 transition">
+                Frontend Engineer
+              </button>
+              <button type="button" class="role-chip px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-[#1e3a8a] border border-slate-200 transition">
+                Full-Stack Software Engineer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dropdown Grid: Round, Difficulty, Question Count -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <!-- Interview Round -->
+          <div>
+            <label for="round-select" class="block text-sm font-semibold text-slate-800 mb-2">Interview Round</label>
+            <select
+              id="round-select"
+              class="w-full px-3.5 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition"
+            >
+              <option value="Technical Round" selected>Technical Round</option>
+              <option value="Behavioral / HR Round">Behavioral / HR Round</option>
+              <option value="System Design & Architecture">System Design &amp; Architecture</option>
+            </select>
+          </div>
+
+          <!-- Difficulty Level -->
+          <div>
+            <label for="difficulty-select" class="block text-sm font-semibold text-slate-800 mb-2">Difficulty Level</label>
+            <select
+              id="difficulty-select"
+              class="w-full px-3.5 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition"
+            >
+              <option value="Easy (Entry Level)">Easy (Entry Level)</option>
+              <option value="Medium (Standard)" selected>Medium (Standard)</option>
+              <option value="Hard (Senior / Advanced)">Hard (Senior / Advanced)</option>
+            </select>
+          </div>
+
+          <!-- Number of Questions -->
+          <div>
+            <label for="count-select" class="block text-sm font-semibold text-slate-800 mb-2">Number of Questions</label>
+            <select
+              id="count-select"
+              class="w-full px-3.5 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition"
+            >
+              <option value="3" selected>3 Questions (Quick)</option>
+              <option value="5">5 Questions (Standard)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Primary Start Action -->
+        <button
+          id="start-btn"
+          type="submit"
+          class="w-full py-3.5 px-6 rounded-xl bg-[#1e3a8a] hover:bg-[#172e6e] text-white font-semibold text-base shadow-sm transition flex items-center justify-center gap-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span id="start-btn-text">Start Mock Interview</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 2: ACTIVE INTERVIEW WORKSPACE (#interview-panel)                -->
+    <!-- ===================================================================== -->
+    <section id="interview-panel" class="hidden bg-white border border-[#dbe2ef] rounded-2xl shadow-sm p-6 sm:p-8 fade-in">
+      <!-- Session Header with Badges & Live Countdown Timer -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4 mb-5">
+        <div>
+          <span class="inline-block text-xs font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-50 px-2.5 py-1 rounded-md mb-1.5">
+            Stage 2 of 3 • Active Mock Session
+          </span>
+          <h2 id="active-role-title" class="text-lg sm:text-xl font-bold text-slate-900">Python Backend Developer</h2>
+          <div class="flex flex-wrap items-center gap-2 mt-1.5">
+            <span id="active-round-badge" class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              Technical Round
+            </span>
+            <span id="active-difficulty-badge" class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-[#1e3a8a] border border-blue-200">
+              Medium (Standard)
+            </span>
+          </div>
+        </div>
+
+        <!-- Countdown Timer Box -->
+        <div id="timer-container" class="flex items-center gap-2.5 bg-blue-50 border border-blue-200 px-4 py-2.5 rounded-xl self-start sm:self-center">
+          <svg class="w-5 h-5 text-[#1e3a8a]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <span class="block text-[10px] uppercase tracking-wider font-bold text-slate-500">Time Remaining</span>
+            <span id="timer-display" class="text-lg font-extrabold text-[#1e3a8a] tabular-nums">10:00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bar & Question Counter -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-600 mb-2">
+          <span id="question-counter-label">Question 1 of 3</span>
+          <span id="answered-counter-label">0 of 3 Answered</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="progress-bar" class="h-full bg-[#1e3a8a] rounded-full transition-all duration-300" style="width: 33.33%"></div>
+        </div>
+      </div>
+
+      <!-- Question Display Card -->
+      <div class="bg-[#f8fafc] border border-[#dbe2ef] rounded-xl p-5 mb-5">
+        <h3 id="question-text" class="text-base sm:text-lg font-bold text-slate-900 leading-relaxed">
+          Loading question...
+        </h3>
+
+        <!-- Highlighted Tip / Guidance Hint Box -->
+        <div class="mt-4 flex items-start gap-2.5 bg-amber-50/90 border border-amber-200 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-amber-900">
+          <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+          </svg>
+          <div>
+            <span class="font-bold">Tip / Guidance Hint: </span>
+            <span id="question-hint">Structure your response clearly with examples.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Line Answer Textarea -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <label for="answer-textarea" class="text-sm font-semibold text-slate-800">Your Interview Response</label>
+          <span id="word-count-label" class="text-xs text-slate-400">0 words</span>
+        </div>
+        <textarea
+          id="answer-textarea"
+          rows="6"
+          placeholder="Type your structured answer here... (Include core concepts, reasoning, and real-world examples)"
+          class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition leading-relaxed"
+        ></textarea>
+      </div>
+
+      <!-- Navigation Controls -->
+      <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
+        <button
+          id="prev-btn"
+          type="button"
+          class="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          &larr; Previous
+        </button>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            id="next-btn"
+            type="button"
+            class="px-6 py-3 rounded-xl bg-[#1e3a8a] hover:bg-[#172e6e] text-white font-semibold text-sm transition"
+          >
+            Next Question &rarr;
+          </button>
+
+          <button
+            id="submit-btn"
+            type="button"
+            class="hidden px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            <span id="submit-btn-text">Submit Interview for Evaluation</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Evaluation Loading Overlay Card (Shown while AI evaluates answers) -->
+      <div id="evaluating-overlay" class="hidden mt-6 p-5 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-3.5 text-sm text-[#1e3a8a] font-medium">
+        <span class="spinner-blue shrink-0"></span>
+        <div>
+          <p class="font-bold">Evaluating your interview responses with AI...</p>
+          <p class="text-xs text-slate-600 mt-0.5">Analyzing technical accuracy, structure, clarity, and generating model reference answers.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 3: AI EVALUATION REPORT (#report-panel)                         -->
+    <!-- ===================================================================== -->
+    <section id="report-panel" class="hidden space-y-6 fade-in">
+      <!-- Overall Readiness Score Summary Card -->
+      <div class="bg-white border border-[#dbe2ef] rounded-2xl shadow-sm p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
+          <div>
+            <span class="inline-block text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md mb-2">
+              Stage 3 of 3 • Evaluation Completed
+            </span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">AI Interview Evaluation Report</h2>
+            <p id="report-subtitle" class="text-sm text-slate-500 mt-1">Python Backend Developer • Technical Round • Medium</p>
+          </div>
+          <span id="readiness-badge" class="self-start sm:self-center px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-[#1e3a8a] border border-blue-200">
+            Interview Ready
+          </span>
+        </div>
+
+        <!-- Score Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 rounded-xl bg-[#f8fafc] border border-[#dbe2ef] text-center">
+            <span class="block text-xs font-bold uppercase tracking-wider text-slate-500">Overall Readiness Score</span>
+            <div class="mt-1.5 flex items-baseline justify-center gap-1">
+              <span id="overall-score-value" class="text-3xl font-extrabold text-[#1e3a8a]">8.2</span>
+              <span class="text-sm font-bold text-slate-400">/ 10</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-[#f8fafc] border border-[#dbe2ef] text-center">
+            <span class="block text-xs font-bold uppercase tracking-wider text-slate-500">Questions Answered</span>
+            <div class="mt-1.5">
+              <span id="questions-answered-stat" class="text-2xl font-extrabold text-slate-800">3 / 3</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-[#f8fafc] border border-[#dbe2ef] text-center">
+            <span class="block text-xs font-bold uppercase tracking-wider text-slate-500">Time Taken</span>
+            <div class="mt-1.5">
+              <span id="time-taken-stat" class="text-2xl font-extrabold text-slate-800">02:45</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-Question Detailed Evaluation Cards Container -->
+      <div id="evaluations-container" class="space-y-4">
+        <!-- Dynamically populated via JS -->
+      </div>
+
+      <!-- Reset Button -->
+      <div class="bg-white border border-[#dbe2ef] rounded-2xl shadow-sm p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-slate-600">Want to practise another role or improve your score?</p>
+        <button
+          id="restart-btn"
+          type="button"
+          class="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#1e3a8a] hover:bg-[#172e6e] text-white font-semibold text-sm shadow-sm transition"
+        >
+          Start New Mock Interview
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Subtle Institutional Footer -->
+  <footer class="border-t border-[#dbe2ef] bg-white py-4 px-4 text-center text-xs text-slate-500 mt-auto">
+    PrepAI Interview Studio • AI-Assisted Web Application Project (CSE – AI, ML &amp; DS)
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- JAVASCRIPT APPLICATION LOGIC & GEMINI API INTEGRATION                   -->
+  <!-- ======================================================================= -->
+  <script>
+    // Gemini API Configuration (Runtime provides API key automatically when empty string)
+    const apiKey = "";
+    const GEMINI_MODEL = "gemini-3-flash-preview";
+    const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+
+    // Application State
+    const state = {
+      role: "",
+      round: "Technical Round",
+      difficulty: "Medium (Standard)",
+      count: 3,
+      questions: [],
+      answers: [],
+      currentIndex: 0,
+      totalSeconds: 600,
+      secondsRemaining: 600,
+      timerId: null,
+      isSubmitting: false
+    };
+
+    // DOM Element References
+    const setupPanel = document.getElementById("setup-panel");
+    const interviewPanel = document.getElementById("interview-panel");
+    const reportPanel = document.getElementById("report-panel");
+
+    const setupForm = document.getElementById("setup-form");
+    const roleInput = document.getElementById("role-input");
+    const roundSelect = document.getElementById("round-select");
+    const difficultySelect = document.getElementById("difficulty-select");
+    const countSelect = document.getElementById("count-select");
+    const startBtn = document.getElementById("start-btn");
+    const startBtnText = document.getElementById("start-btn-text");
+
+    const timerDisplay = document.getElementById("timer-display");
+    const timerContainer = document.getElementById("timer-container");
+    const questionCounterLabel = document.getElementById("question-counter-label");
+    const answeredCounterLabel = document.getElementById("answered-counter-label");
+    const progressBar = document.getElementById("progress-bar");
+    const questionText = document.getElementById("question-text");
+    const questionHint = document.getElementById("question-hint");
+    const answerTextarea = document.getElementById("answer-textarea");
+    const wordCountLabel = document.getElementById("word-count-label");
+
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const submitBtn = document.getElementById("submit-btn");
+    const submitBtnText = document.getElementById("submit-btn-text");
+    const evaluatingOverlay = document.getElementById("evaluating-overlay");
+    const restartBtn = document.getElementById("restart-btn");
+
+    // Inline Toast Banner Helper (Replaces browser alert)
+    function showToast(message, type = "info") {
+      const banner = document.getElementById("toast-banner");
+      const text = document.getElementById("toast-text");
+      text.textContent = message;
+
+      banner.classList.remove(
+        "hidden",
+        "bg-rose-50", "border-rose-200", "text-rose-800",
+        "bg-blue-50", "border-blue-200", "text-[#1e3a8a]",
+        "bg-amber-50", "border-amber-200", "text-amber-800"
+      );
+
+      if (type === "error") {
+        banner.classList.add("bg-rose-50", "border-rose-200", "text-rose-800");
+      } else if (type === "warning") {
+        banner.classList.add("bg-amber-50", "border-amber-200", "text-amber-800");
+      } else {
+        banner.classList.add("bg-blue-50", "border-blue-200", "text-[#1e3a8a]");
+      }
+    }
+
+    function hideToast() {
+      document.getElementById("toast-banner").classList.add("hidden");
+    }
+
+    // Quick-Select Role Chip Event Listeners
+    document.querySelectorAll(".role-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        roleInput.value = chip.textContent.trim();
+        hideToast();
+        roleInput.focus();
+      });
+    });
+
+    // Live Word Counter & Auto-Save on Typing
+    answerTextarea.addEventListener("input", () => {
+      state.answers[state.currentIndex] = answerTextarea.value;
+      updateWordCount();
+      updateAnsweredCounter();
+    });
+
+    function updateWordCount() {
+      const text = answerTextarea.value.trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      wordCountLabel.textContent = `${words} ${words === 1 ? "word" : "words"}`;
+    }
+
+    function updateAnsweredCounter() {
+      const answeredCount = state.answers.filter((a) => a && a.trim().length > 0).length;
+      answeredCounterLabel.textContent = `${answeredCount} of ${state.questions.length} Answered`;
+    }
+
+    // Exponential Backoff Fetch Helper for Gemini API
+    async function callGeminiWithRetry(payload, maxRetries = 3) {
+      let delay = 1000;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await fetch(GEMINI_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const result = await response.json();
+          const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!rawText) {
+            throw new Error("Empty model response");
+          }
+
+          // Clean potential markdown fences just in case
+          const cleaned = rawText.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+          return JSON.parse(cleaned);
+        } catch (err) {
+          if (attempt === maxRetries) {
+            throw err;
+          }
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+    }
+
+    // Built-in Fallback Question Generator (Ensures seamless demo if offline/rate-limited)
+    function generateFallbackQuestions(role, round, difficulty, count) {
+      const bank = {
+        "Technical Round": [
+          {
+            question: `What are the core architectural principles, libraries, and best practices you rely on most when working as a ${role}?`,
+            hint: "Mention modular design, error handling, testing workflows, and specific production tools."
+          },
+          {
+            question: `How do you diagnose and resolve a sudden performance bottleneck or memory leak in a production ${role} application?`,
+            hint: "Walk through profiling tools, logging analysis, isolating root causes, and verifying the fix."
+          },
+          {
+            question: `Explain how you ensure security, input validation, and data integrity when building features for a ${role} system.`,
+            hint: "Discuss sanitization, authentication/authorization checks, and handling edge-case inputs."
+          },
+          {
+            question: `Compare two common data structures or algorithms relevant to ${role} tasks and explain their time-space complexity trade-offs.`,
+            hint: "Use Big-O notation and give a concrete scenario where one outperforms the other."
+          },
+          {
+            question: `Describe your approach to writing maintainable automated tests and conducting code reviews for ${difficulty} projects.`,
+            hint: "Cover unit tests, integration tests, mocking external dependencies, and readability standards."
+          }
+        ],
+        "Behavioral / HR Round": [
+          {
+            question: `Tell me about a challenging project or tight deadline you faced while preparing for a ${role} career. How did you manage it?`,
+            hint: "Use the STAR method: Situation, Task, Action you took, and measurable Result."
+          },
+          {
+            question: `Describe a time when you received constructive criticism on your work or code. How did you respond and improve?`,
+            hint: "Highlight openness to feedback, specific steps taken to adapt, and what you learned."
+          },
+          {
+            question: `How do you prioritize tasks when multiple urgent bugs or feature requests arrive simultaneously?`,
+            hint: "Discuss impact assessment, stakeholder communication, and structured time management."
+          },
+          {
+            question: `Tell me about a situation where you had to quickly learn a new technology or framework to complete a deliverable.`,
+            hint: "Explain your learning strategy, documentation usage, and how you applied it successfully."
+          },
+          {
+            question: `Why are you interested in a ${role} position, and how do your strengths align with collaborative engineering teams?`,
+            hint: "Connect your technical curiosity, problem-solving mindset, and teamwork examples."
+          }
+        ],
+        "System Design & Architecture": [
+          {
+            question: `Design a scalable backend architecture for a high-traffic service relevant to a ${role}. How would you handle traffic spikes?`,
+            hint: "Discuss load balancing, stateless services, caching layers, and horizontal scaling."
+          },
+          {
+            question: `How would you design the database schema and indexing strategy for an application requiring both fast reads and reliable writes?`,
+            hint: "Compare SQL vs. NoSQL trade-offs, indexing strategies, and read replicas."
+          },
+          {
+            question: `Explain how you would integrate an external AI or third-party API reliably without blocking user-facing requests.`,
+            hint: "Mention asynchronous queues, timeouts, retry with exponential backoff, and graceful fallbacks."
+          },
+          {
+            question: `What monitoring, alerting, and fault-tolerance mechanisms would you put in place for a mission-critical ${role} service?`,
+            hint: "Cover health checks, structured logs, circuit breakers, and disaster recovery."
+          },
+          {
+            question: `Walk through how you would structure API versioning and backward compatibility as a product evolves.`,
+            hint: "Discuss URI/header versioning, deprecation policies, and contract testing."
+          }
+        ]
+      };
+
+      const selectedList = bank[round] || bank["Technical Round"];
+      return selectedList.slice(0, count).map((item, idx) => ({
+        id: idx + 1,
+        question: item.question,
+        hint: item.hint
+      }));
+    }
+
+    // Built-in Fallback Evaluator (Produces realistic rubric scores & feedback if offline)
+    function generateFallbackEvaluation(role, qaPairs) {
+      let totalScore = 0;
+      const evaluations = qaPairs.map((pair) => {
+        const answer = (pair.answer || "").trim();
+        const words = answer ? answer.split(/\s+/).length : 0;
+
+        let score = 0;
+        let strengths = "";
+        let improvements = "";
+
+        if (words === 0 || answer === "No answer provided.") {
+          score = 1;
+          strengths = "Attempted the interview session.";
+          improvements = "No response was submitted for this question. Aim to provide a structured 3–5 sentence explanation covering key concepts.";
+        } else if (words < 15) {
+          score = 4;
+          strengths = "Provided a concise initial thought directly addressing the prompt.";
+          improvements = "Expand your answer with deeper technical reasoning, trade-offs, and a concrete practical example.";
+        } else if (words < 35) {
+          score = 7;
+          strengths = "Clear structure and relevant domain terminology aligned with the role.";
+          improvements = "Include measurable outcomes, edge-case considerations, or specific tools to elevate this to a standout answer.";
+        } else {
+          score = 9;
+          strengths = "Comprehensive, well-structured response demonstrating strong conceptual clarity and practical application.";
+          improvements = "Keep explanations crisp and highlight key takeaways upfront for maximum interviewer impact.";
+        }
+
+        totalScore += score;
+        return {
+          question: pair.question,
+          user_answer: answer || "No answer provided.",
+          score: score,
+          strengths: strengths,
+          improvements: improvements,
+          ideal_answer: `As a ${role}, I approach this by first defining the core requirements and constraints, selecting proven architectural patterns, validating edge cases through automated tests, and measuring real-world performance to ensure reliability.`
+        };
+      });
+
+      const overall = Number((totalScore / Math.max(qaPairs.length, 1)).toFixed(1));
+      return {
+        overall_score: overall,
+        evaluations: evaluations
+      };
+    }
+
+    // Generate Questions via Gemini API with Fallback
+    async function fetchInterviewQuestions(role, round, difficulty, count) {
+      const prompt = `Generate exactly ${count} realistic "${round}" interview questions for a "${role}" candidate at "${difficulty}" level.
+For each question, provide a concise, actionable 1-sentence structural guidance hint (such as STAR method or technical architecture tips).`;
+
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: {
+          parts: [{
+            text: "You are an expert technical interviewer and hiring manager. Generate clear, industry-relevant interview questions tailored strictly to the requested job role, round type, and difficulty level."
+          }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.5,
+          responseSchema: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                id: { type: "INTEGER" },
+                question: { type: "STRING" },
+                hint: { type: "STRING" }
+              },
+              required: ["id", "question", "hint"],
+              propertyOrdering: ["id", "question", "hint"]
+            }
+          }
+        }
+      };
+
+      try {
+        const result = await callGeminiWithRetry(payload, 2);
+        if (Array.isArray(result) && result.length > 0) {
+          return { questions: result.slice(0, count), isFallback: false };
+        }
+        throw new Error("Invalid question array");
+      } catch (err) {
+        return {
+          questions: generateFallbackQuestions(role, round, difficulty, count),
+          isFallback: true
+        };
+      }
+    }
+
+    // Evaluate Candidate Answers via Gemini API with Fallback
+    async function evaluateInterviewResponses(role, round, difficulty, qaPairs) {
+      const prompt = `Evaluate the following mock interview responses for the role of "${role}" (${round}, ${difficulty}).
+Candidate Q&A Pairs:
+${JSON.stringify(qaPairs, null, 2)}
+
+Score each response objectively from 0 to 10 (where 0 is unanswered/incorrect, 5 is average, 8+ is strong, 10 is exceptional). Provide specific strengths, constructive areas to improve, and a concise model ideal reference answer for every question.`;
+
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: {
+          parts: [{
+            text: "You are a senior hiring committee evaluator. Be fair, encouraging, and technically rigorous. If a candidate leaves an answer blank or says 'No answer provided.', assign a low score (0-2) and explain what a strong response should cover."
+          }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.3,
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              overall_score: { type: "NUMBER" },
+              evaluations: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    question: { type: "STRING" },
+                    score: { type: "INTEGER" },
+                    strengths: { type: "STRING" },
+                    improvements: { type: "STRING" },
+                    ideal_answer: { type: "STRING" }
+                  },
+                  required: ["question", "score", "strengths", "improvements", "ideal_answer"],
+                  propertyOrdering: ["question", "score", "strengths", "improvements", "ideal_answer"]
+                }
+              }
+            },
+            required: ["overall_score", "evaluations"],
+            propertyOrdering: ["overall_score", "evaluations"]
+          }
+        }
+      };
+
+      try {
+        const result = await callGeminiWithRetry(payload, 2);
+        if (result && Array.isArray(result.evaluations)) {
+          // Attach user_answer cleanly to each item
+          result.evaluations = result.evaluations.map((ev, idx) => ({
+            ...ev,
+            user_answer: qaPairs[idx]?.answer || "No answer provided."
+          }));
+          return result;
+        }
+        throw new Error("Invalid evaluation payload");
+      } catch (err) {
+        return generateFallbackEvaluation(role, qaPairs);
+      }
+    }
+
+    // Timer Management (10:00 Countdown)
+    function formatTime(totalSecs) {
+      const mins = Math.floor(Math.max(totalSecs, 0) / 60);
+      const secs = Math.max(totalSecs, 0) % 60;
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function startSessionTimer() {
+      stopSessionTimer();
+      state.totalSeconds = 600;
+      state.secondsRemaining = 600;
+      timerDisplay.textContent = formatTime(state.secondsRemaining);
+      timerContainer.classList.remove("bg-rose-50", "border-rose-200");
+      timerContainer.classList.add("bg-blue-50", "border-blue-200");
+      timerDisplay.classList.remove("text-rose-700");
+      timerDisplay.classList.add("text-[#1e3a8a]");
+
+      state.timerId = setInterval(() => {
+        state.secondsRemaining--;
+        timerDisplay.textContent = formatTime(state.secondsRemaining);
+
+        // Highlight timer in red when under 60 seconds
+        if (state.secondsRemaining <= 60) {
+          timerContainer.classList.remove("bg-blue-50", "border-blue-200");
+          timerContainer.classList.add("bg-rose-50", "border-rose-200");
+          timerDisplay.classList.remove("text-[#1e3a8a]");
+          timerDisplay.classList.add("text-rose-700");
+        }
+
+        if (state.secondsRemaining <= 0) {
+          stopSessionTimer();
+          showToast("Time expired! Automatically submitting your interview responses for evaluation.", "warning");
+          handleInterviewSubmit(true);
+        }
+      }, 1000);
+    }
+
+    function stopSessionTimer() {
+      if (state.timerId !== null) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+    }
+
+    // Stage 1 Form Submission -> Generate Questions & Move to Stage 2
+    setupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideToast();
+
+      const role = roleInput.value.trim();
+      if (!role) {
+        showToast("Please enter a Target Job Role before starting the mock interview.", "error");
+        roleInput.focus();
+        return;
+      }
+
+      state.role = role;
+      state.round = roundSelect.value;
+      state.difficulty = difficultySelect.value;
+      state.count = parseInt(countSelect.value, 10) || 3;
+
+      // Loading UI state
+      startBtn.disabled = true;
+      startBtn.innerHTML = `<span class="spinner"></span><span>Generating ${state.count} Tailored Questions...</span>`;
+
+      const { questions, isFallback } = await fetchInterviewQuestions(
+        state.role,
+        state.round,
+        state.difficulty,
+        state.count
+      );
+
+      state.questions = questions;
+      state.answers = new Array(questions.length).fill("");
+      state.currentIndex = 0;
+
+      // Restore button state
+      startBtn.disabled = false;
+      startBtn.innerHTML = `<span id="start-btn-text">Start Mock Interview</span>`;
+
+      if (isFallback) {
+        showToast("Running in Built-in Question Bank mode. Answer the questions below to receive feedback.", "info");
+      }
+
+      // Populate Stage 2 Header Badges
+      document.getElementById("active-role-title").textContent = state.role;
+      document.getElementById("active-round-badge").textContent = state.round;
+      document.getElementById("active-difficulty-badge").textContent = state.difficulty;
+
+      // Switch View: Stage 1 -> Stage 2
+      setupPanel.classList.add("hidden");
+      reportPanel.classList.add("hidden");
+      interviewPanel.classList.remove("hidden");
+
+      renderCurrentQuestion();
+      startSessionTimer();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    // Render Active Question in Stage 2
+    function renderCurrentQuestion() {
+      const total = state.questions.length;
+      const idx = state.currentIndex;
+      const currentQ = state.questions[idx];
+
+      questionCounterLabel.textContent = `Question ${idx + 1} of ${total}`;
+      const progressPercent = ((idx + 1) / total) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+
+      questionText.textContent = `${idx + 1}. ${currentQ.question}`;
+      questionHint.textContent = currentQ.hint;
+
+      answerTextarea.value = state.answers[idx] || "";
+      updateWordCount();
+      updateAnsweredCounter();
+
+      // Update navigation button visibility
+      prevBtn.disabled = idx === 0;
+
+      if (idx === total - 1) {
+        nextBtn.classList.add("hidden");
+        submitBtn.classList.remove("hidden");
+      } else {
+        nextBtn.classList.remove("hidden");
+        submitBtn.classList.add("hidden");
+      }
+    }
+
+    // Navigation Handlers
+    prevBtn.addEventListener("click", () => {
+      if (state.isSubmitting) return;
+      state.answers[state.currentIndex] = answerTextarea.value;
+      if (state.currentIndex > 0) {
+        state.currentIndex--;
+        renderCurrentQuestion();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (state.isSubmitting) return;
+      state.answers[state.currentIndex] = answerTextarea.value;
+      if (state.currentIndex < state.questions.length - 1) {
+        state.currentIndex++;
+        renderCurrentQuestion();
+        answerTextarea.focus();
+      }
+    });
+
+    submitBtn.addEventListener("click", () => {
+      handleInterviewSubmit(false);
+    });
+
+    // Submit Interview -> Evaluate via Gemini AI -> Render Stage 3 Report
+    async function handleInterviewSubmit(isAutoSubmit = false) {
+      if (state.isSubmitting) return;
+      state.isSubmitting = true;
+      stopSessionTimer();
+
+      // Save final textarea value
+      state.answers[state.currentIndex] = answerTextarea.value;
+
+      const elapsedSeconds = state.totalSeconds - state.secondsRemaining;
+      const timeTakenFormatted = formatTime(elapsedSeconds);
+      const answeredCount = state.answers.filter((a) => a && a.trim().length > 0).length;
+
+      // Disable controls and show AI evaluation spinner
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      submitBtn.disabled = true;
+      answerTextarea.disabled = true;
+      evaluatingOverlay.classList.remove("hidden");
+
+      const qaPairs = state.questions.map((q, idx) => ({
+        question: q.question,
+        answer: (state.answers[idx] || "").trim() || "No answer provided."
+      }));
+
+      const evaluationReport = await evaluateInterviewResponses(
+        state.role,
+        state.round,
+        state.difficulty,
+        qaPairs
+      );
+
+      // Reset Stage 2 UI controls for future sessions
+      state.isSubmitting = false;
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+      submitBtn.disabled = false;
+      answerTextarea.disabled = false;
+      evaluatingOverlay.classList.add("hidden");
+
+      renderEvaluationReport(evaluationReport, answeredCount, timeTakenFormatted);
+    }
+
+    // Render Stage 3 AI Evaluation Report
+    function renderEvaluationReport(report, answeredCount, timeTakenFormatted) {
+      const overall = Number(report.overall_score || 0).toFixed(1);
+      document.getElementById("overall-score-value").textContent = overall;
+      document.getElementById("report-subtitle").textContent =
+        `${state.role} • ${state.round} • ${state.difficulty}`;
+      document.getElementById("questions-answered-stat").textContent =
+        `${answeredCount} / ${state.questions.length}`;
+      document.getElementById("time-taken-stat").textContent = timeTakenFormatted;
+
+      // Set Readiness Badge styling based on score
+      const badge = document.getElementById("readiness-badge");
+      badge.className = "self-start sm:self-center px-3.5 py-1.5 rounded-full text-xs font-bold border ";
+      if (overall >= 8.0) {
+        badge.textContent = "Strong Hire / Interview Ready";
+        badge.classList.add("bg-emerald-50", "text-emerald-800", "border-emerald-200");
+      } else if (overall >= 5.5) {
+        badge.textContent = "Solid Foundation — Minor Refinement Needed";
+        badge.classList.add("bg-blue-50", "text-[#1e3a8a]", "border-blue-200");
+      } else {
+        badge.textContent = "Needs Further Practice";
+        badge.classList.add("bg-amber-50", "text-amber-800", "border-amber-200");
+      }
+
+      // Render Per-Question Detailed Evaluation Cards
+      const container = document.getElementById("evaluations-container");
+      container.replaceChildren();
+
+      report.evaluations.forEach((ev, idx) => {
+        const scoreVal = Number(ev.score || 0);
+        let scoreBadgeClass = "bg-blue-50 text-[#1e3a8a] border-blue-200";
+        if (scoreVal >= 8) {
+          scoreBadgeClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
+        } else if (scoreVal < 5) {
+          scoreBadgeClass = "bg-rose-50 text-rose-800 border-rose-200";
+        }
+
+        const card = document.createElement("article");
+        card.className = "bg-white border border-[#dbe2ef] rounded-2xl shadow-sm p-6 space-y-4";
+
+        // Card Header: Question + Score Badge
+        const header = document.createElement("div");
+        header.className = "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-slate-100 pb-3";
+
+        const qTitle = document.createElement("h3");
+        qTitle.className = "text-base font-bold text-slate-900 leading-snug";
+        qTitle.textContent = `Question ${idx + 1}: ${ev.question}`;
+
+        const scorePill = document.createElement("span");
+        scorePill.className = `shrink-0 self-start px-3 py-1 rounded-lg text-xs font-extrabold border ${scoreBadgeClass}`;
+        scorePill.textContent = `Score: ${scoreVal} / 10`;
+
+        header.append(qTitle, scorePill);
+
+        // Candidate Response Block
+        const userAnsBox = document.createElement("div");
+        userAnsBox.className = "bg-slate-50 border border-slate-200 rounded-xl p-3.5";
+        const userAnsLabel = document.createElement("span");
+        userAnsLabel.className = "block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1";
+        userAnsLabel.textContent = "Your Submitted Response";
+        const userAnsText = document.createElement("p");
+        userAnsText.className = "text-sm text-slate-700 whitespace-pre-line leading-relaxed";
+        userAnsText.textContent = ev.user_answer;
+        userAnsBox.append(userAnsLabel, userAnsText);
+
+        // AI Critique Grid (Strengths & Improvements)
+        const critiqueGrid = document.createElement("div");
+        critiqueGrid.className = "grid grid-cols-1 md:grid-cols-2 gap-3";
+
+        const strengthBox = document.createElement("div");
+        strengthBox.className = "bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5";
+        const strengthTitle = document.createElement("span");
+        strengthTitle.className = "block text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1";
+        strengthTitle.textContent = "Strengths";
+        const strengthBody = document.createElement("p");
+        strengthBody.className = "text-sm text-slate-800 leading-relaxed";
+        strengthBody.textContent = ev.strengths;
+        strengthBox.append(strengthTitle, strengthBody);
+
+        const improveBox = document.createElement("div");
+        improveBox.className = "bg-amber-50/70 border border-amber-200 rounded-xl p-3.5";
+        const improveTitle = document.createElement("span");
+        improveTitle.className = "block text-xs font-bold uppercase tracking-wider text-amber-800 mb-1";
+        improveTitle.textContent = "Areas to Improve";
+        const improveBody = document.createElement("p");
+        improveBody.className = "text-sm text-slate-800 leading-relaxed";
+        improveBody.textContent = ev.improvements;
+        improveBox.append(improveTitle, improveBody);
+
+        critiqueGrid.append(strengthBox, improveBox);
+
+        // Model Ideal Reference Answer Block
+        const idealBox = document.createElement("div");
+        idealBox.className = "bg-blue-50/70 border-l-4 border-[#1e3a8a] rounded-r-xl p-3.5";
+        const idealTitle = document.createElement("span");
+        idealTitle.className = "block text-xs font-bold uppercase tracking-wider text-[#1e3a8a] mb-1";
+        idealTitle.textContent = "Model Ideal Reference Answer";
+        const idealBody = document.createElement("p");
+        idealBody.className = "text-sm text-slate-800 leading-relaxed";
+        idealBody.textContent = ev.ideal_answer;
+        idealBox.append(idealTitle, idealBody);
+
+        card.append(header, userAnsBox, critiqueGrid, idealBox);
+        container.appendChild(card);
+      });
+
+      // Switch View: Stage 2 -> Stage 3
+      interviewPanel.classList.add("hidden");
+      reportPanel.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Reset Application Cleanly Back to Stage 1
+    restartBtn.addEventListener("click", () => {
+      stopSessionTimer();
+      hideToast();
+      state.questions = [];
+      state.answers = [];
+      state.currentIndex = 0;
+      state.isSubmitting = false;
+
+      reportPanel.classList.add("hidden");
+      interviewPanel.classList.add("hidden");
+      setupPanel.classList.remove("hidden");
+
+      roleInput.focus();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  </script>
+</body>
+</html>
+```
